@@ -153,4 +153,15 @@ class MarathonRepository {
             Result.failure(e)
         }
     }
+
+    suspend fun verifyAdminPassword(inputPassword: String): Boolean {
+        return try {
+            val doc = db.collection("config").document("admin").get().await()
+            val remotePassword = doc.getString("password")
+            val validPassword = if (!remotePassword.isNullOrBlank()) remotePassword else "odac@26"
+            inputPassword == validPassword
+        } catch (e: Exception) {
+            inputPassword == "odac@26"
+        }
+    }
 }

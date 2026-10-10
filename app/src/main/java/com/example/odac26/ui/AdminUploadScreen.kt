@@ -51,6 +51,7 @@ fun AdminUploadScreen(
     var isProcessing by remember { mutableStateOf(false) }
     var statusMessage by remember { mutableStateOf("") }
     var showDeleteConfirmation by remember { mutableStateOf(false) }
+    var pendingParticipantsToUpload by remember { mutableStateOf<List<Participant>?>(null) }
 
     val filePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
@@ -61,13 +62,8 @@ fun AdminUploadScreen(
             scope.launch {
                 try {
                     val participants = parseCsv(context, it)
-                    statusMessage = "Uploading ${participants.size} participants..."
-                    val result = repository.uploadParticipants(participants)
-                    if (result.isSuccess) {
-                        statusMessage = "Successfully uploaded ${result.getOrNull()} participants."
-                    } else {
-                        statusMessage = "Upload failed: ${result.exceptionOrNull()?.message}"
-                    }
+                    pendingParticipantsToUpload = participants
+                    statusMessage = "Parsed ${participants.size} participants. Awaiting confirmation."
                 } catch (e: Exception) {
                     statusMessage = "Error parsing file: ${e.message}"
                 } finally {
@@ -140,12 +136,46 @@ fun AdminUploadScreen(
             Spacer(modifier = Modifier.height(24.dp))
             Text(text = statusMessage)
         }
+
+        pendingParticipantsToUpload?.let { participants ->
+            AlertDialog(
+                onDismissRequest = { pendingParticipantsToUpload = null },
+                title = { Text("Confirm CSV Upload") },
+                text = { Text("Found ${participants.size} participants in the CSV. Are you sure you want to upload these records into Firebase?") },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            val list = participants
+                            pendingParticipantsToUpload = null
+                            isProcessing = true
+                            statusMessage = "Uploading ${list.size} participants..."
+                            scope.launch {
+                                val result = repository.uploadParticipants(list)
+                                isProcessing = false
+                                statusMessage = if (result.isSuccess) {
+                                    "Successfully uploaded ${result.getOrNull()} participants."
+                                } else {
+                                    "Upload failed: ${result.exceptionOrNull()?.message}"
+                                }
+                            }
+                        }
+                    ) {
+                        Text("Upload")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { pendingParticipantsToUpload = null }) {
+                        Text("Cancel")
+                    }
+                }
+            )
+        }
         
         if (showDeleteConfirmation) {
             AlertDialog(
                 onDismissRequest = { showDeleteConfirmation = false },
-                title = { Text("Confirm Deletion") },
-                text = { Text("Are you sure you want to permanently delete ALL participant data from the database? This cannot be undone.") },
+                title = { Text("Confirm Data Deletion") },
+                text = { Text("Are you sure you want to permanently delete ALL participant data from the database? This action cannot be undone.") },
                 confirmButton = {
                     TextButton(
                         onClick = {
@@ -163,7 +193,7 @@ fun AdminUploadScreen(
                             }
                         }
                     ) {
-                        Text("Delete", color = MaterialTheme.colorScheme.error)
+                        Text("Delete All", color = MaterialTheme.colorScheme.error)
                     }
                 },
                 dismissButton = {

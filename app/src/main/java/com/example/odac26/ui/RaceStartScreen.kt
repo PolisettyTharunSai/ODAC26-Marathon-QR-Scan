@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -18,6 +19,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -40,6 +42,7 @@ fun RaceStartScreen(
     val scope = rememberCoroutineScope()
     var isProcessing by remember { mutableStateOf(false) }
     var statusMessage by remember { mutableStateOf("") }
+    var pendingCategoryToStart by remember { mutableStateOf<String?>(null) }
 
     fun triggerStart(category: String) {
         isProcessing = true
@@ -54,6 +57,30 @@ fun RaceStartScreen(
                 "❌ Error: ${result.exceptionOrNull()?.message}"
             }
         }
+    }
+
+    pendingCategoryToStart?.let { category ->
+        AlertDialog(
+            onDismissRequest = { pendingCategoryToStart = null },
+            title = { Text("Confirm Race Start") },
+            text = { Text("Are you sure you want to start the ${category.uppercase()} race? This will record the start time for all present runners.") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val cat = category
+                        pendingCategoryToStart = null
+                        triggerStart(cat)
+                    }
+                ) {
+                    Text("Start Race")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingCategoryToStart = null }) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 
     Scaffold(
@@ -94,7 +121,7 @@ fun RaceStartScreen(
                 Spacer(modifier = Modifier.height(32.dp))
             } else {
                 Button(
-                    onClick = { triggerStart("5k") },
+                    onClick = { pendingCategoryToStart = "5k" },
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                     modifier = Modifier
                         .fillMaxWidth()
@@ -106,7 +133,7 @@ fun RaceStartScreen(
                 Spacer(modifier = Modifier.height(24.dp))
                 
                 Button(
-                    onClick = { triggerStart("11k") },
+                    onClick = { pendingCategoryToStart = "11k" },
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary),
                     modifier = Modifier
                         .fillMaxWidth()
