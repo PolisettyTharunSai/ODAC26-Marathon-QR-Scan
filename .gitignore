@@ -1,0 +1,17 @@
+# Gradle & Build
+.gradle/
+/build/
+/app/build/
+
+# Local configuration & Android Studio / IDE
+local.properties
+.idea/
+*.iml
+.kotlin/
+.DS_Store
+/captures
+.externalNativeBuild
+.cxx
+
+# Firebase Configuration (contains app-specific credentials/project IDs)
+/app/google-services.json
